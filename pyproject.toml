@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qrpack"
+version = "0.0.1"
+description = "Pack a folder into printable QR codes and restore it from a photo."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "segno>=1.6",
+    "pillow>=10",
+    "opencv-python-headless>=4.9",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+# The `qrpack` console script is added when cli.py lands (day 1, owner 4).
+
+[tool.setuptools.packages.find]
+include = ["qrpack*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

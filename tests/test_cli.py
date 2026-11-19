@@ -33,3 +33,40 @@ def test_help_lists_every_subcommand(capsys):
 def test_each_subcommand_has_its_own_help(name, capsys):
     assert run([name, "--help"]) == 0
     assert "usage:" in capsys.readouterr().out
+
+
+def test_no_command_prints_usage_and_fails(capsys):
+    assert run([]) == 2
+    assert "usage:" in capsys.readouterr().err
+
+
+def test_version_matches_package(capsys):
+    import qrpack
+
+    assert run(["--version"]) == 0
+    assert qrpack.__version__ in capsys.readouterr().out
+
+
+def test_pack_requires_an_output(capsys):
+    assert run(["pack", "somefolder"]) != 0
+    assert "-o" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [["estimate", "x"], ["pack", "x", "-o", "sheet.png"], ["restore", "s.png", "-o", "out"]],
+)
+def test_unwired_subcommand_fails_loudly(argv, capsys):
+    # A stub must never exit 0: a script that trusts the exit code would
+    # otherwise believe a backup was written when nothing was.
+    assert run(argv) != 0
+    assert "not implemented" in capsys.readouterr().err
+
+
+def test_console_script_is_registered():
+    tomllib = pytest.importorskip("tomllib")  # stdlib from Python 3.11
+    from pathlib import Path
+
+    pyproject = Path(__file__).resolve().parent.parent / "pyproject.toml"
+    scripts = tomllib.loads(pyproject.read_text())["project"]["scripts"]
+    assert scripts["qrpack"] == "qrpack.cli:main"

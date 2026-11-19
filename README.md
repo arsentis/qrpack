@@ -36,14 +36,26 @@ printer and a camera.
    quoting the QR specification.
 5. Ship as a real package: tests, CI, CLI, documented findings.
 
-## Planned interface
+## Command line
+
+Installing the package (see Development below) puts a `qrpack` command on your
+path. `qrpack --help` lists the subcommands and `qrpack COMMAND --help` shows
+the options for each.
 
 ```bash
-qrpack estimate SRC            # how many codes and sheets would this take?
-qrpack pack SRC -o sheet.png   # folder -> printable sheet(s)
-qrpack restore IMG -o DIR      # sheet image -> original files
-qrpack calibrate               # measure this machine's real limit
+qrpack estimate SRC              # how many codes and sheets would this take?
+qrpack pack SRC -o sheet.png     # folder -> printable sheet(s)
+qrpack restore IMG... -o DIR     # sheet image(s) -> original files
+qrpack calibrate                 # measure this machine's real limit (planned)
 ```
+
+`--chunk BYTES` sets how many compressed bytes go into each code (default
+1,200). The command parses its arguments today; `estimate`, `pack` and
+`restore` are connected to the library during the sprint and, until then, exit
+with a non-zero status and a "not implemented yet" message, so a script can
+never mistake a stub for a backup that was written.
+
+Exit status: `0` on success, non-zero on any failure.
 
 ## Development
 
@@ -51,6 +63,7 @@ qrpack calibrate               # measure this machine's real limit
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 python -m pytest -q
+qrpack --help    # the console script is installed
 ```
 
 Read `CONTRIBUTING.md` first. Work is tracked in `PLAN.md` and GitHub issues.

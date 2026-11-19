@@ -10,9 +10,12 @@ Issue #1. This module owns only the *archiving* half of core; the framing half
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import io
 import lzma
 import tarfile
+from dataclasses import dataclass
 from pathlib import Path
 
 # A tar is block-padded to 512-byte records and stores names in plain text, so
@@ -71,3 +74,52 @@ def unpack_bytes(blob: bytes, dest: Path) -> list[str]:
         names = [m.name for m in tf.getmembers() if m.isfile()]
         tf.extractall(dest)
     return sorted(names)
+
+
+# --- framing (issue #2, @Rustlingrass) ---------------------------------------
+# Frozen payload format (Hour 0, never change it):
+#   QRPK1|<sha256-first-16>|<index>/<total>|<base64 chunk>
+
+MAGIC = "QRPK1"
+DIGEST_HEX = 16
+
+
+def sha256_digest(blob: bytes) -> str:
+    """Return the first 16 hex characters of the blob's sha256."""
+    return hashlib.sha256(blob).hexdigest()[:DIGEST_HEX]
+
+
+@dataclass(frozen=True)
+class Header:
+    """One labelled payload: version, digest, part number and base64 data."""
+
+    digest: str
+    index: int
+    total: int
+    payload: str
+
+    def render(self) -> str:
+        """Render the frozen `QRPK1|digest|index/total|base64` line."""
+        return f"{MAGIC}|{self.digest}|{self.index}/{self.total}|{self.payload}"
+
+    @classmethod
+    def parse(cls, line: str) -> Header:
+        """Parse a rendered line back into a Header."""
+        magic, digest, counters, payload = line.split("|")
+        if magic != MAGIC:
+            raise ValueError(f"bad payload magic {magic!r}, expected {MAGIC!r}")
+        index, total = counters.split("/")
+        return cls(digest.lower(), int(index), int(total), payload)
+
+
+def chunk(blob: bytes, chunk_size: int) -> list[bytes]:
+    """Split a blob into labelled, ASCII-encoded payloads."""
+    digest = sha256_digest(blob)
+    parts = [blob[i:i + chunk_size] for i in range(0, len(blob), chunk_size)] or [b""]
+    total = len(parts)
+    return [
+        Header(
+            digest, index, total, base64.b64encode(part).decode("ascii")
+        ).render().encode("ascii")
+        for index, part in enumerate(parts, 1)
+    ]

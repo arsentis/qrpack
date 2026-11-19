@@ -9,7 +9,15 @@ Modules land during the sprint (see PLAN.md):
 
 __version__ = "0.0.1"
 
-from .core import compress, decompress, pack_bytes, unpack_bytes
+from .core import (
+    Header,
+    chunk,
+    compress,
+    decompress,
+    pack_bytes,
+    sha256_digest,
+    unpack_bytes,
+)
 
 __all__ = [
     "__version__",
@@ -17,4 +25,7 @@ __all__ = [
     "unpack_bytes",
     "compress",
     "decompress",
+    "Header",
+    "chunk",
+    "sha256_digest",
 ]

@@ -1,11 +1,13 @@
-"""Core archiving: a directory becomes one compressed blob, and back again.
+"""Core: archiving and framing for the printable-QR backup pipeline.
 
-Issue #1. This module owns only the *archiving* half of core; the framing half
-(`Header`, `chunk`, `estimate`, sha256) belongs to issue #2 and is added by
-@Rustlingrass. Agreed signatures (Hour 0):
+Archiving (issue #1, @arsentis) turns a folder into one compressed blob;
+framing (issue #2, @Rustlingrass) splits that blob into labelled QR payloads.
+Agreed signatures (Hour 0):
 
     pack_bytes(src: Path) -> bytes
     unpack_bytes(blob: bytes, dest: Path) -> list[str]
+    chunk(blob: bytes, chunk_size: int) -> list[bytes]
+    sha256_digest(blob: bytes) -> str
 """
 
 from __future__ import annotations
@@ -86,13 +88,26 @@ DIGEST_HEX = 16
 
 
 def sha256_digest(blob: bytes) -> str:
-    """Return the first 16 hex characters of the blob's sha256."""
+    """Return the first 16 hex characters of the blob's sha256.
+
+    Truncating to 64 bits is enough to detect accidental corruption during
+    scanning; it is not a tamper-proof signature. Restore (issue #7) compares
+    the digest in the header against the reassembled blob before unpacking.
+    """
     return hashlib.sha256(blob).hexdigest()[:DIGEST_HEX]
 
 
 @dataclass(frozen=True)
 class Header:
-    """One labelled payload: version, digest, part number and base64 data."""
+    """One labelled payload: version, digest, part number and base64 data.
+
+    The rendered form is the frozen Hour-0 line:
+
+        QRPK1|<sha256-first-16>|<index>/<total>|<base64 chunk>
+
+    `payload` may be empty: a zero-byte blob still yields one `1/1` payload,
+    so backing up an empty file is representable.
+    """
 
     digest: str
     index: int
@@ -127,7 +142,16 @@ class Header:
 
 
 def chunk(blob: bytes, chunk_size: int) -> list[bytes]:
-    """Split a blob into labelled, ASCII-encoded payloads."""
+    """Split a blob into labelled, ASCII-encoded payloads.
+
+    `chunk_size` counts raw blob bytes, not QR characters: base64 expands the
+    data and the label adds a fixed prefix. Measured on this machine, 1000 raw
+    bytes became 1336 base64 characters and a 1363-character payload line
+    (16 of those characters are the truncated digest).
+
+    Reproduce:
+        python -c "from qrpack.core import chunk; b=b'x'*1000; p=chunk(b,1000)[0].decode(); print(len(b), len(p.split('|')[3]), len(p))"
+    """
     if chunk_size <= 0:
         raise ValueError(f"chunk_size must be positive, got {chunk_size}")
     digest = sha256_digest(blob)

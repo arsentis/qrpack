@@ -1,0 +1,73 @@
+name: authorship
+
+# Enforces human-only attribution. A text rule in CONTRIBUTING.md documents
+# intent; this check is what actually blocks a merge, because the contributor
+# graph is a graded artefact of this project.
+#
+# It fails when a commit in the pull request is authored by, committed by, or
+# co-authored by a bot or AI assistant. Some assistant tooling appends a
+# "Co-authored-by:" trailer silently, which credits that account as a repo
+# contributor even when no GitHub App is installed.
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  no-bot-authorship:
+    name: human authorship only
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reject bot and AI-assistant attribution
+        run: |
+          set -euo pipefail
+          BASE="origin/${{ github.base_ref }}"
+          RANGE="${BASE}...HEAD"
+
+          # account names / emails that must never appear in this history
+          PATTERN='claude|anthropic|copilot|chatgpt|openai|\[bot\]|bot@|codex|cursor|devin|gemini'
+
+          fail=0
+
+          echo "== authors and committers in $RANGE =="
+          git log "$RANGE" --format='%an <%ae>%n%cn <%ce>' | sort -u | sed 's/^/  /'
+
+          if git log "$RANGE" --format='%an <%ae>|%cn <%ce>' \
+               | grep -iE "$PATTERN"; then
+            echo
+            echo "::error::A commit is authored or committed by a bot/AI account."
+            echo "Fix: re-author your commits as yourself."
+            echo "  git config --global user.name  'Your Name'"
+            echo "  git config --global user.email 'your-github-email'"
+            echo "  git rebase -i $BASE   # then 'edit' and amend the author"
+            fail=1
+          fi
+
+          echo
+          echo "== co-author trailers in $RANGE =="
+          trailers=$(git log "$RANGE" --format='%(trailers:key=Co-authored-by)' | grep -v '^$' || true)
+          if [ -n "$trailers" ]; then
+            echo "$trailers" | sed 's/^/  /'
+            if echo "$trailers" | grep -iE "$PATTERN"; then
+              echo
+              echo "::error::A commit message credits a bot/AI as co-author."
+              echo "Fix: remove the 'Co-authored-by' trailer naming the assistant."
+              echo "  git rebase -i $BASE   # 'reword' the offending commits"
+              fail=1
+            fi
+          else
+            echo "  (none)"
+          fi
+
+          if [ "$fail" -ne 0 ]; then
+            exit 1
+          fi
+          echo
+          echo "OK — all commits are attributed to human accounts."

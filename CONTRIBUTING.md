@@ -131,6 +131,28 @@ Rules of thumb:
 - Never commit `brag-output/`, `__pycache__/`, `.venv/`, rendered `*.png`/`*.mp4`,
   or anything in `.gitignore`.
 
+### No bot or AI authorship — enforced by CI
+
+The contributor graph is the record of who did this project. A bot in it
+devalues everyone's work, so:
+
+- **Do not install the Claude, Copilot, or any other GitHub App on this repo.**
+  An installed app commits as `claude[bot]` and is counted as a contributor.
+  Only the repo owner can install one; the answer is no for this project.
+- **Never leave an AI `Co-authored-by:` trailer in a commit message.** Some
+  assistant tooling appends one automatically. It credits that account as a
+  contributor even with no app installed. Check your message before committing.
+- Using an assistant locally is fine. Commit the result under **your own name
+  and your own GitHub email** — the work is yours, so the credit should be too.
+
+`.github/workflows/authorship.yml` fails any pull request whose commits are
+authored, committed, or co-authored by a bot/AI account. Audit the whole history
+at any time:
+
+```bash
+bash audit-authors.sh
+```
+
 ### Pair programming
 
 If two of you wrote it together, credit both — add a blank line then:

@@ -18,7 +18,8 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=8"]
 
-# The `qrpack` console script is added when cli.py lands (day 1, owner 4).
+[project.scripts]
+qrpack = "qrpack.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["qrpack*"]

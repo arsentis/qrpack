@@ -14,6 +14,7 @@ import base64
 import hashlib
 import io
 import lzma
+import string
 import tarfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -104,16 +105,31 @@ class Header:
 
     @classmethod
     def parse(cls, line: str) -> Header:
-        """Parse a rendered line back into a Header."""
-        magic, digest, counters, payload = line.split("|")
+        """Parse a rendered line back into a Header, rejecting malformed input."""
+        fields = line.split("|")
+        if len(fields) != 4:
+            raise ValueError(f"expected 4 fields, got {len(fields)}")
+        magic, digest, counters, payload = fields
         if magic != MAGIC:
             raise ValueError(f"bad payload magic {magic!r}, expected {MAGIC!r}")
-        index, total = counters.split("/")
-        return cls(digest.lower(), int(index), int(total), payload)
+        if len(digest) != DIGEST_HEX or any(c not in string.hexdigits for c in digest):
+            raise ValueError(f"digest must be {DIGEST_HEX} hex characters, got {digest!r}")
+        parts = counters.split("/")
+        if len(parts) != 2:
+            raise ValueError(f"bad index/total {counters!r}, expected 'index/total'")
+        try:
+            index, total = int(parts[0]), int(parts[1])
+        except ValueError as exc:
+            raise ValueError(f"bad index/total {counters!r}, expected integers") from exc
+        if not 1 <= index <= total:
+            raise ValueError(f"index must satisfy 1 <= index <= total, got {counters!r}")
+        return cls(digest.lower(), index, total, payload)
 
 
 def chunk(blob: bytes, chunk_size: int) -> list[bytes]:
     """Split a blob into labelled, ASCII-encoded payloads."""
+    if chunk_size <= 0:
+        raise ValueError(f"chunk_size must be positive, got {chunk_size}")
     digest = sha256_digest(blob)
     parts = [blob[i:i + chunk_size] for i in range(0, len(blob), chunk_size)] or [b""]
     total = len(parts)

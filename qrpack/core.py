@@ -16,9 +16,15 @@ import tarfile
 from pathlib import Path
 
 # A tar is block-padded to 512-byte records and stores names in plain text, so
-# it compresses extremely well. Measured on a 3-file sample: 20,480 B of tar
-# became 3,624 B -- a 5.6x reduction. Since every byte saved is a QR code we do
-# not have to print, compression is not an optimisation here, it is the point.
+# it compresses extremely well. Measured on this repo's own three Markdown
+# files: 30,720 B of tar became 7,640 B of xz, a 4.0x reduction. Since every
+# ~1,200 bytes is one more QR code to print, compression is not an
+# optimisation here, it is the point.
+#
+# Reproduce:
+#   python3 -c "from qrpack.core import pack_bytes, compress; \
+#     from pathlib import Path; b=pack_bytes(Path('sample')); \
+#     print(len(b), len(compress(b)))"
 PRESET = 9 | lzma.PRESET_EXTREME
 
 

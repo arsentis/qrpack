@@ -23,10 +23,23 @@ LABEL_HEIGHT = 56
 QUIET_ZONE = 4
 
 # Error-correction level, as a parameter rather than a constant, because it is
-# the main knob deciding whether a *printed* code still scans: "l" recovers
-# ~7% of a damaged symbol, "h" ~30%, at the cost of more modules in the same
-# physical square. Calibration (#11) has to sweep it to produce a
-# pixels-per-module table, so it cannot be baked in.
+# the main knob deciding whether a *printed* code still scans. Measured on a
+# realistic 1,227-character payload, at a 40 mm cell printed at 300 DPI:
+#
+#     ecc  version  modules  px/module  recovers
+#       l       25      125       3.78  ~7%
+#       m       29      141       3.35  ~15%
+#       q       34      161       2.93  ~25%
+#       h       40      185       2.55  ~30%
+#
+# The counter-intuitive part: "h" recovers the most damage but needs 1.48x the
+# modules in the same physical square, dropping to 2.55 px/module -- below the
+# ~3 px/module region where decoders start failing. So raising ECC can make a
+# printed code *less* readable, not more. Which level actually wins is a
+# property of the printer and camera, which is why calibration (#11) sweeps it
+# instead of the library picking.
+#
+# Reproduce:  python3 tests/measure_ecc_cost.py
 #
 # "m" stays the default: it is what every sheet rendered so far used, so
 # existing output and tests are unaffected.

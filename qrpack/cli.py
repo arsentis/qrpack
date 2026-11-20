@@ -10,12 +10,15 @@ Day 2: the handlers are wired to core / sheet / scan.
 from __future__ import annotations
 
 import argparse
+import io
 import sys
+import tarfile
 from collections.abc import Sequence
 from pathlib import Path
 
 from . import __version__
-from .core import chunk, compress, pack_bytes
+from .core import chunk, compress, decompress, pack_bytes, unpack_bytes, verify_digest
+from .scan import reassemble, scan_image
 from .sheet import make_sheet
 
 # Bytes of compressed data per QR code. In the prototype measurements quoted in
@@ -26,11 +29,6 @@ DEFAULT_CHUNK = 1200
 # A full 1,200-byte chunk makes a QR symbol too wide for four columns on A4
 # (make_sheet refuses rather than shrink it); three fit, 12 codes per page.
 DEFAULT_COLS = 3
-
-
-def _not_ready(name: str) -> int:
-    print(f"qrpack {name}: not implemented yet (lands on day 2)", file=sys.stderr)
-    return 1
 
 
 def _fail(name: str, message: str) -> int:
@@ -75,7 +73,39 @@ def _cmd_pack(args: argparse.Namespace) -> int:
 
 
 def _cmd_restore(args: argparse.Namespace) -> int:
-    return _not_ready("restore")
+    for image in args.images:
+        if not image.exists():
+            return _fail("restore", f"{image} does not exist")
+    texts = []
+    for image in args.images:
+        texts.extend(scan_image(image, args.cols))
+    if not texts:
+        return _fail("restore", "no qrpack codes found in the image(s)")
+    try:
+        blob, digest, missing = reassemble(texts)
+    except ValueError as exc:
+        return _fail("restore", str(exc))
+    if missing:
+        # Name the lost parts instead of writing a corrupt archive.
+        return _fail("restore", f"missing parts {missing}; rescan them and pass every sheet")
+    try:
+        verify_digest(blob, digest)
+    except ValueError as exc:
+        return _fail("restore", str(exc))
+    raw = decompress(blob)
+    args.output.mkdir(parents=True, exist_ok=True)
+    if not tarfile.is_tarfile(io.BytesIO(raw)):
+        # pack_bytes stores a single file as its raw bytes, without a name.
+        target = args.output / "restored.bin"
+        target.write_bytes(raw)
+        print(f"restored 1 file ({len(raw)} B) -> {target}")
+        return 0
+    try:
+        names = unpack_bytes(raw, args.output)
+    except ValueError as exc:
+        return _fail("restore", str(exc))
+    print(f"restored {len(names)} file(s) -> {args.output}")
+    return 0
 
 
 def _add_chunk_option(p: argparse.ArgumentParser) -> None:

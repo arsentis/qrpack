@@ -8,6 +8,7 @@ Agreed signatures (Hour 0):
     unpack_bytes(blob: bytes, dest: Path) -> list[str]
     chunk(blob: bytes, chunk_size: int) -> list[bytes]
     sha256_digest(blob: bytes) -> str
+    verify_digest(blob: bytes, expected: str) -> None
 """
 
 from __future__ import annotations
@@ -166,11 +167,29 @@ def chunk(blob: bytes, chunk_size: int) -> list[bytes]:
 
 
 class DigestMismatchError(ValueError):
-    """Reassembled bytes do not match the digest carried in the header."""
+    """Reassembled bytes do not match the digest carried in the header.
+
+    Subclasses ValueError so callers that already catch malformed framing
+    also catch corruption. It is raised only for a well-formed digest whose
+    bytes do not match; malformed digests raise plain ValueError.
+    """
 
 
 def verify_digest(blob: bytes, expected: str) -> None:
-    """Raise DigestMismatchError unless the blob matches the expected digest."""
+    """Refuse reassembled bytes whose sha256 differs from the header digest.
+
+    `expected` is the 16-hex-character digest from a parsed `Header`; the hash
+    is taken over the *reassembled compressed blob*, before decompression or
+    unpacking. The restore path (CLI issue #10) must call this before
+    `decompress` / `unpack_bytes`, so a mismatch can never be written out as
+    a corrupt file. The function returns nothing: it either passes or raises.
+
+    Measured on this machine, flipping one byte of a 2560-byte blob changed
+    the digest from e392378f849d67bb to 1df94a4f60d45b4a and was refused.
+
+    Reproduce:
+        python -c "from qrpack.core import sha256_digest, verify_digest; b=bytes(range(256))*10; d=sha256_digest(b); c=bytearray(b); c[123]^=1; print(d, sha256_digest(bytes(c))); verify_digest(bytes(c), d)"
+    """
     if (
         not isinstance(expected, str)
         or len(expected) != DIGEST_HEX

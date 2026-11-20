@@ -171,6 +171,12 @@ class DigestMismatchError(ValueError):
 
 def verify_digest(blob: bytes, expected: str) -> None:
     """Raise DigestMismatchError unless the blob matches the expected digest."""
+    if (
+        not isinstance(expected, str)
+        or len(expected) != DIGEST_HEX
+        or any(c not in string.hexdigits for c in expected)
+    ):
+        raise ValueError(f"digest must be {DIGEST_HEX} hex characters, got {expected!r}")
     actual = sha256_digest(blob)
     if actual != expected.lower():
         raise DigestMismatchError(

@@ -30,7 +30,16 @@ def _not_ready(name: str) -> int:
     return 1
 
 
+def _fail(name: str, message: str) -> int:
+    print(f"qrpack {name}: {message}", file=sys.stderr)
+    return 1
+
+
 def _cmd_estimate(args: argparse.Namespace) -> int:
+    if not args.src.exists():
+        return _fail("estimate", f"{args.src} does not exist")
+    if args.chunk <= 0:
+        return _fail("estimate", f"--chunk must be positive, got {args.chunk}")
     raw = pack_bytes(args.src)
     compressed = compress(raw)
     payloads = chunk(compressed, args.chunk)

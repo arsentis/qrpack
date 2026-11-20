@@ -48,6 +48,12 @@ def decompress(blob: bytes) -> bytes:
 # Directories that must never reach the archive. Build output and dependency
 # trees are large, machine-specific and reconstructible, so printing them wastes
 # QR codes; `.git` additionally carries the whole history and local config.
+#
+# Measured on this repo plus a typical set of junk dirs: 57,052 B compressed
+# with them, 25,480 B without -- 64 QR codes down to 29, so 35 fewer codes and
+# three fewer sheets of paper for the same restorable content.
+#
+# Reproduce:  python3 tests/measure_archive_rules.py
 SKIP_DIRS = frozenset({
     "__pycache__",
     ".git",

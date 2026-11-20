@@ -45,12 +45,42 @@ def decompress(blob: bytes) -> bytes:
     return lzma.decompress(blob)
 
 
-def pack_bytes(source: Path) -> bytes:
-    """A file -> its bytes. A directory -> a tar of its files.
+# Directories that must never reach the archive. Build output and dependency
+# trees are large, machine-specific and reconstructible, so printing them wastes
+# QR codes; `.git` additionally carries the whole history and local config.
+SKIP_DIRS = frozenset({
+    "__pycache__",
+    ".git",
+    "node_modules",
+    ".venv",
+    "venv",
+    "dist",
+    "build",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".egg-info",
+})
 
-    Entries are sorted by name so the same tree always produces the same
-    archive layout; an unsorted walk depends on filesystem order and would make
-    the output unreproducible between machines.
+
+def _is_skipped(relative: Path) -> bool:
+    """True if any component of the path is a skipped directory."""
+    return any(part in SKIP_DIRS or part.endswith(".egg-info") for part in relative.parts)
+
+
+def pack_bytes(source: Path) -> bytes:
+    """A file -> its bytes. A directory -> a deterministic tar of its files.
+
+    Two properties, both required for the digest printed on the sheet to mean
+    anything:
+
+    * entries are sorted by name, because an unsorted walk follows filesystem
+      order and differs between machines;
+    * mtime, uid, gid, uname and gname are zeroed, because they record *when
+      and where* the archive was built. Leaving them in means the same folder
+      hashes differently on two laptops -- so a sha256 mismatch would no longer
+      imply the paper is damaged. Zeroing them also keeps the packer's username
+      off a sheet that is designed to be printed and shared.
     """
     source = Path(source)
     if source.is_file():
@@ -61,7 +91,14 @@ def pack_bytes(source: Path) -> bytes:
         for path in sorted(source.rglob("*")):
             if not path.is_file():
                 continue
-            info = tf.gettarinfo(path, arcname=str(path.relative_to(source)))
+            relative = path.relative_to(source)
+            if _is_skipped(relative):
+                continue
+            info = tf.gettarinfo(path, arcname=str(relative))
+            info.mtime = 0
+            info.uid = info.gid = 0
+            info.uname = info.gname = ""
+            info.mode = 0o644
             with path.open("rb") as fh:
                 tf.addfile(info, fh)
     return buf.getvalue()

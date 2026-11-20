@@ -87,6 +87,39 @@ def render_qr(
     return output
 
 
+def render_codes(
+    payloads: list[str],
+    scale: int = 8,
+    ecc: str = DEFAULT_ECC,
+) -> list[Image.Image]:
+    """Return one in-memory image per payload, all padded to a uniform cell.
+
+    The name issue #3 asks for, and the seam the scanner needs: `make_sheet`
+    writes files, but calibration (#11) and the grid cropper (#9) want the
+    images themselves without touching disk.
+
+    Every image comes back the same size even when the payloads produce
+    different QR versions. That is deliberate -- the scanner locates cells by
+    grid arithmetic, so a short last chunk rendering as a smaller symbol would
+    shift every following cell and break cropping silently.
+    """
+    if not isinstance(payloads, (list, tuple)):
+        raise TypeError("payloads must be a list or tuple of strings")
+    if not payloads:
+        raise ValueError("payloads must contain at least one QR payload")
+    _check_scale(scale)
+    level = _check_ecc(ecc)
+
+    symbols = [_qr_image(_validated_qr(p, level), scale) for p in payloads]
+    side = max(max(image.size) for image in symbols)
+    cells = []
+    for symbol in symbols:
+        cell = Image.new("RGB", (side, side), "white")
+        cell.paste(symbol, ((side - symbol.width) // 2, (side - symbol.height) // 2))
+        cells.append(cell)
+    return cells
+
+
 def _qr_image(qr, scale: int) -> Image.Image:
     """Use segno's PNG renderer so QR pixels remain crisp and unresampled."""
     buffer = BytesIO()

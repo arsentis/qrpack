@@ -55,12 +55,21 @@ def _cmd_estimate(args: argparse.Namespace) -> int:
 
 
 def _cmd_pack(args: argparse.Namespace) -> int:
+    if not args.src.exists():
+        return _fail("pack", f"{args.src} does not exist")
+    if args.chunk <= 0:
+        return _fail("pack", f"--chunk must be positive, got {args.chunk}")
     raw = pack_bytes(args.src)
     compressed = compress(raw)
     # chunk() returns bytes; make_sheet() takes the payloads as text.
     payloads = [p.decode("ascii") for p in chunk(compressed, args.chunk)]
     title = f"qrpack backup of {args.src.resolve().name}"
-    pages, codes = make_sheet(payloads, title, args.output, cols=args.cols)
+    try:
+        pages, codes = make_sheet(payloads, title, args.output, cols=args.cols)
+    except (TypeError, ValueError) as exc:
+        # make_sheet explains what is wrong (too many columns, bad extension);
+        # show that message instead of a traceback.
+        return _fail("pack", str(exc))
     print(f"{codes} codes on {pages} page(s) -> {args.output}")
     return 0
 

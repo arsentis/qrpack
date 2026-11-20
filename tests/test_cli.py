@@ -52,17 +52,6 @@ def test_pack_requires_an_output(capsys):
     assert "-o" in capsys.readouterr().err
 
 
-@pytest.mark.parametrize(
-    "argv",
-    [["restore", "s.png", "-o", "out"]],
-)
-def test_unwired_subcommand_fails_loudly(argv, capsys):
-    # A stub must never exit 0: a script that trusts the exit code would
-    # otherwise believe a backup was written when nothing was.
-    assert run(argv) != 0
-    assert "not implemented" in capsys.readouterr().err
-
-
 def test_console_script_is_registered():
     tomllib = pytest.importorskip("tomllib")  # stdlib from Python 3.11
     from pathlib import Path

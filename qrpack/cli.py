@@ -15,6 +15,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from . import __version__
+from .core import chunk, compress, pack_bytes
 
 # Bytes of compressed data per QR code. In the prototype measurements quoted in
 # the project proposal, 1,200 B chunks decoded 5 of 5 cells where version-40
@@ -30,7 +31,15 @@ def _not_ready(name: str) -> int:
 
 
 def _cmd_estimate(args: argparse.Namespace) -> int:
-    return _not_ready("estimate")
+    raw = pack_bytes(args.src)
+    compressed = compress(raw)
+    payloads = chunk(compressed, args.chunk)
+    encoded = sum(len(p) for p in payloads)
+    print(
+        f"{len(raw)} B raw -> {len(compressed)} B compressed -> "
+        f"{encoded} chars encoded -> {len(payloads)} codes"
+    )
+    return 0
 
 
 def _cmd_pack(args: argparse.Namespace) -> int:

@@ -104,15 +104,42 @@ def pack_bytes(source: Path) -> bytes:
     return buf.getvalue()
 
 
+def _reject_unsafe_members(members, dest: Path) -> None:
+    """Raise if any member would write outside `dest`.
+
+    A tar may contain `../escape.txt` or `/etc/passwd`; `extractall` happily
+    follows both. qrpack restores archives that arrive on *paper*, scanned from
+    an image we did not author, so the archive is untrusted input by
+    construction and must be validated before a single byte is written.
+
+    Checked by resolving each destination path and requiring it to stay under
+    the destination root, which covers `..`, absolute names and symlink
+    targets in one test.
+    """
+    root = dest.resolve()
+    for member in members:
+        target = (dest / member.name).resolve()
+        if target != root and root not in target.parents:
+            raise ValueError(f"unsafe path in archive: {member.name!r}")
+        if member.issym() or member.islnk():
+            link = (target.parent / member.linkname).resolve()
+            if link != root and root not in link.parents:
+                raise ValueError(f"unsafe path in archive: {member.name!r} -> {member.linkname!r}")
+
+
 def unpack_bytes(blob: bytes, dest: Path) -> list[str]:
     """Inverse of `pack_bytes` for the directory case.
 
-    Returns the sorted names of the files written.
+    Validates every member before extracting anything, so a hostile archive
+    cannot write a partial payload outside the destination. Returns the sorted
+    names of the files written.
     """
     dest = Path(dest)
     dest.mkdir(parents=True, exist_ok=True)
     with tarfile.open(fileobj=io.BytesIO(blob)) as tf:
-        names = [m.name for m in tf.getmembers() if m.isfile()]
+        members = tf.getmembers()
+        _reject_unsafe_members(members, dest)
+        names = [m.name for m in members if m.isfile()]
         tf.extractall(dest)
     return sorted(names)
 

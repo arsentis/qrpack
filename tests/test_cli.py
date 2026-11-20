@@ -83,3 +83,17 @@ def test_estimate_reports_the_pipeline_sizes(tmp_path, capsys):
     out = capsys.readouterr().out
     for word in ("raw", "compressed", "encoded", "codes"):
         assert word in out
+
+
+def test_estimate_fails_on_a_missing_source(tmp_path, capsys):
+    # Without this check, a typo in the path silently estimates an empty
+    # archive and exits 0.
+    assert run(["estimate", str(tmp_path / "no-such-folder")]) != 0
+    assert "does not exist" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("size", ["0", "-5"])
+def test_estimate_rejects_a_non_positive_chunk(size, tmp_path, capsys):
+    (tmp_path / "a.txt").write_text("x")
+    assert run(["estimate", str(tmp_path), "--chunk", size]) != 0
+    assert "--chunk" in capsys.readouterr().err

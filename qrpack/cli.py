@@ -16,13 +16,16 @@ from pathlib import Path
 
 from . import __version__
 from .core import chunk, compress, pack_bytes
+from .sheet import make_sheet
 
 # Bytes of compressed data per QR code. In the prototype measurements quoted in
 # the project proposal, 1,200 B chunks decoded 5 of 5 cells where version-40
 # symbols decoded 0 of 2. A starting point only: `qrpack calibrate` is meant
 # to measure the right value for each printer and camera.
 DEFAULT_CHUNK = 1200
-DEFAULT_COLS = 4
+# A full 1,200-byte chunk makes a QR symbol too wide for four columns on A4
+# (make_sheet refuses rather than shrink it); three fit, 12 codes per page.
+DEFAULT_COLS = 3
 
 
 def _not_ready(name: str) -> int:
@@ -52,7 +55,14 @@ def _cmd_estimate(args: argparse.Namespace) -> int:
 
 
 def _cmd_pack(args: argparse.Namespace) -> int:
-    return _not_ready("pack")
+    raw = pack_bytes(args.src)
+    compressed = compress(raw)
+    # chunk() returns bytes; make_sheet() takes the payloads as text.
+    payloads = [p.decode("ascii") for p in chunk(compressed, args.chunk)]
+    title = f"qrpack backup of {args.src.resolve().name}"
+    pages, codes = make_sheet(payloads, title, args.output, cols=args.cols)
+    print(f"{codes} codes on {pages} page(s) -> {args.output}")
+    return 0
 
 
 def _cmd_restore(args: argparse.Namespace) -> int:

@@ -22,13 +22,42 @@ CELL_GAP = 24
 LABEL_HEIGHT = 56
 QUIET_ZONE = 4
 
+# Error-correction level, as a parameter rather than a constant, because it is
+# the main knob deciding whether a *printed* code still scans: "l" recovers
+# ~7% of a damaged symbol, "h" ~30%, at the cost of more modules in the same
+# physical square. Calibration (#11) has to sweep it to produce a
+# pixels-per-module table, so it cannot be baked in.
+#
+# "m" stays the default: it is what every sheet rendered so far used, so
+# existing output and tests are unaffected.
+ECC_LEVELS = ("l", "m", "q", "h")
+DEFAULT_ECC = "m"
 
-def _validated_qr(payload: str):
+
+def _check_ecc(ecc: str) -> str:
+    """Normalise and validate an error-correction level.
+
+    Accepts either case so a CLI flag like `-e H` behaves like `h`. Returns the
+    lowercase level for segno.
+    """
+    if not isinstance(ecc, str):
+        raise TypeError(f"ecc must be a string, one of {ECC_LEVELS}")
+    level = ecc.strip().lower()
+    if level not in ECC_LEVELS:
+        raise ValueError(f"unknown error-correction level {ecc!r}; expected one of {ECC_LEVELS}")
+    return level
+
+
+def _validated_qr(payload: str, ecc: str = DEFAULT_ECC):
     if not isinstance(payload, str):
         raise TypeError("payload must be a string")
     if not payload:
         raise ValueError("payload must not be empty")
-    return segno.make(payload, error="m", micro=False, boost_error=False)
+    level = _check_ecc(ecc)
+    # boost_error stays off: segno would silently raise the level when a
+    # payload leaves spare capacity, which would make a measured ECC sweep
+    # report a level the caller never asked for.
+    return segno.make(payload, error=level, micro=False, boost_error=False)
 
 
 def _check_scale(scale: int) -> None:
@@ -38,9 +67,17 @@ def _check_scale(scale: int) -> None:
         raise ValueError("scale must be positive")
 
 
-def render_qr(payload: str, out_path: str | Path, scale: int = 8) -> Path:
-    """Save one QR as PNG, preserving the original payload."""
-    qr = _validated_qr(payload)
+def render_qr(
+    payload: str,
+    out_path: str | Path,
+    scale: int = 8,
+    ecc: str = DEFAULT_ECC,
+) -> Path:
+    """Save one QR as PNG, preserving the original payload.
+
+    `ecc` is one of "l", "m", "q", "h" (case-insensitive); see ECC_LEVELS.
+    """
+    qr = _validated_qr(payload, ecc)
     _check_scale(scale)
     output = Path(out_path)
     if output.suffix.lower() != ".png":
@@ -71,6 +108,7 @@ def make_sheet(
     out_path: str | Path,
     cols: int = 4,
     scale: int = 4,
+    ecc: str = DEFAULT_ECC,
 ) -> tuple[int, int]:
     """Generate printable A4 PNG page(s) or one multipage PDF.
 
@@ -92,12 +130,13 @@ def make_sheet(
     if cols < 1:
         raise ValueError("cols must be positive")
     _check_scale(scale)
+    level = _check_ecc(ecc)
     output = Path(out_path)
     if output.suffix.lower() not in (".png", ".pdf"):
         raise ValueError("output file must have a .png or .pdf extension")
 
     # Validate all symbols before writing any output.
-    qrs = [_validated_qr(payload) for payload in payloads]
+    qrs = [_validated_qr(payload, level) for payload in payloads]
     sizes = [qr.symbol_size(scale=scale, border=QUIET_ZONE) for qr in qrs]
     max_width = max(width for width, _ in sizes)
     max_height = max(height for _, height in sizes)

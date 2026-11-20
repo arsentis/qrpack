@@ -70,3 +70,16 @@ def test_console_script_is_registered():
     pyproject = Path(__file__).resolve().parent.parent / "pyproject.toml"
     scripts = tomllib.loads(pyproject.read_text())["project"]["scripts"]
     assert scripts["qrpack"] == "qrpack.cli:main"
+
+
+def test_estimate_reports_the_pipeline_sizes(tmp_path, capsys):
+    folder = tmp_path / "data"
+    folder.mkdir()
+    (folder / "hello.txt").write_text("hello " * 500)
+
+    code = run(["estimate", str(folder)])
+
+    assert code == 0
+    out = capsys.readouterr().out
+    for word in ("raw", "compressed", "encoded", "codes"):
+        assert word in out

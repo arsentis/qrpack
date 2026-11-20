@@ -54,7 +54,7 @@ def test_pack_requires_an_output(capsys):
 
 @pytest.mark.parametrize(
     "argv",
-    [["estimate", "x"], ["pack", "x", "-o", "sheet.png"], ["restore", "s.png", "-o", "out"]],
+    [["pack", "x", "-o", "sheet.png"], ["restore", "s.png", "-o", "out"]],
 )
 def test_unwired_subcommand_fails_loudly(argv, capsys):
     # A stub must never exit 0: a script that trusts the exit code would

@@ -10,6 +10,7 @@ Modules land during the sprint (see PLAN.md):
 __version__ = "0.0.1"
 
 from .core import (
+    DigestMismatchError,
     Header,
     chunk,
     compress,
@@ -17,6 +18,7 @@ from .core import (
     pack_bytes,
     sha256_digest,
     unpack_bytes,
+    verify_digest,
 )
 
 __all__ = [
@@ -28,4 +30,6 @@ __all__ = [
     "Header",
     "chunk",
     "sha256_digest",
+    "DigestMismatchError",
+    "verify_digest",
 ]

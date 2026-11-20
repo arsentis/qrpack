@@ -163,3 +163,17 @@ def chunk(blob: bytes, chunk_size: int) -> list[bytes]:
         ).render().encode("ascii")
         for index, part in enumerate(parts, 1)
     ]
+
+
+class DigestMismatchError(ValueError):
+    """Reassembled bytes do not match the digest carried in the header."""
+
+
+def verify_digest(blob: bytes, expected: str) -> None:
+    """Raise DigestMismatchError unless the blob matches the expected digest."""
+    actual = sha256_digest(blob)
+    if actual != expected.lower():
+        raise DigestMismatchError(
+            f"digest mismatch: header says {expected!r}, reassembled bytes "
+            f"hash to {actual!r}"
+        )

@@ -36,6 +36,52 @@ printer and a camera.
    quoting the QR specification.
 5. Ship as a real package: tests, CI, CLI, documented findings.
 
+## Measured Findings
+
+The following results were obtained from experiments using Python, Segno and OpenCV.
+
+### OpenCV Version
+
+The experiments were performed using OpenCV `5.1.0`.
+
+To check the installed version:
+
+```bash
+python -c "import cv2; print(cv2.__version__)"
+```
+
+### QR Sheet Decoding
+
+A sheet containing three QR codes was generated using:
+
+```python
+make_sheet(payloads, "measurement", "measure_sheet.png", cols=3, scale=4)
+```
+
+Payload lengths: `1363`, `1363` and `775` characters.
+
+Decoding results:
+
+| Detector | Scale | Decoded |
+|---|---|---|
+| QRCodeDetector | 0.5–3.0 | 0/3 |
+| QRCodeDetectorAruco | 0.5 | 0/3 |
+| QRCodeDetectorAruco | 0.75–3.0 | 3/3 |
+
+### Direct QR Decoding by ECC
+
+The standard OpenCV `QRCodeDetector` was tested with QR codes generated using different error correction levels (ECC).
+
+| ECC | QR Version | Scale 4 | Scale 6 | Scale 8 |
+|---|---:|---|---|---|
+| L | 26 | FAIL | PASS | PASS |
+| M | 30 | FAIL | FAIL | FAIL |
+| Q | 37 | FAIL | FAIL | FAIL |
+
+These results show that decoding performance depends on the detector, image scale and QR code configuration.
+
+The experiments were performed using Python, Segno and OpenCV. See the measurement script in the project instructions for the complete reproduction procedure.
+
 ## Command line
 
 Installing the package (see Development below) puts a `qrpack` command on your

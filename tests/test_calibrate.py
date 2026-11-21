@@ -33,3 +33,47 @@ def test_px_per_module_decreases_as_ecc_rises():
     px = [row["px_per_module"] for row in ecc_cost(PAYLOAD, printed_px=472)]
     assert px == sorted(px, reverse=True)
     assert len(set(px)) == len(px)
+
+
+def test_tiny_payload_never_decreases_modules():
+    """A short payload may fit the same version at every level: equal, not fewer."""
+    modules = [row["modules"] for row in ecc_cost("QRPK1|0123456789abcdef|1/1|AA")]
+    assert modules == sorted(modules)
+
+
+def test_matches_the_numbers_quoted_in_sheet_py():
+    """The table in sheet.py's comment is reproducible from this function."""
+    rows = {row["ecc"]: row for row in ecc_cost(PAYLOAD)}
+    assert {k: r["modules"] for k, r in rows.items()} == {"l": 125, "m": 141, "q": 161, "h": 185}
+    assert {k: round(r["px_per_module"], 2) for k, r in rows.items()} == {
+        "l": 3.78, "m": 3.35, "q": 2.93, "h": 2.55,
+    }
+
+
+def test_empty_payload_is_rejected():
+    with pytest.raises(ValueError, match="empty"):
+        ecc_cost("")
+
+
+def test_non_string_payload_is_rejected():
+    with pytest.raises(TypeError):
+        ecc_cost(b"bytes")
+
+
+@pytest.mark.parametrize("bad", [0, -472])
+def test_non_positive_printed_size_is_rejected(bad):
+    with pytest.raises(ValueError, match="positive"):
+        ecc_cost(PAYLOAD, printed_px=bad)
+
+
+@pytest.mark.parametrize("bad", [472.0, "472", True])
+def test_non_integer_printed_size_is_rejected(bad):
+    with pytest.raises(TypeError):
+        ecc_cost(PAYLOAD, printed_px=bad)
+
+
+def test_payload_too_large_for_any_code_fails_loudly():
+    import segno
+
+    with pytest.raises(segno.DataOverflowError):
+        ecc_cost("A" * 5000)

@@ -206,7 +206,7 @@ the options for each.
 qrpack estimate SRC              # how many codes and sheets would this take?
 qrpack pack SRC -o sheet.png     # folder -> printable sheet(s)
 qrpack restore IMG... -o DIR     # sheet image(s) -> original files
-qrpack calibrate                 # measure this machine's real limit (planned)
+qrpack calibrate                 # measure which chunk size survives, recommend one
 ```
 
 `--chunk BYTES` sets how many compressed bytes go into each code (default
@@ -295,10 +295,25 @@ $ python -m pytest -q
 
 #### calibrate
 
-Not yet implemented, so there is no transcript to paste. It is tracked in
-issues #41, #42 and #43; the planned output is a payload-size ladder with a
-pixels-per-module column and one recommended `--chunk` value. The measurements
-it will automate are in Measured Findings above.
+```
+$ qrpack calibrate
+payload  ver  modules  px/module  decodes
+   100 B  v9        61       7.74  PASS
+   300 B  v16       89       5.30  PASS
+   600 B  v23      117       4.03  PASS
+   900 B  v29      141       3.35  PASS
+  1200 B  v33      157       3.01  fail
+  1500 B  v38      177       2.67  fail
+
+recommended --chunk : 900 B
+```
+
+Each size is rendered at one printed square (`--printed-px`, default 472 = 40 mm
+at 300 DPI), so denser codes get fewer pixels per module. `--ecc`, `--blur` and
+`--jpeg-quality` model your own printer and camera. The recommendation is the
+largest size that passed with every smaller size also passing. The command exits
+1 when nothing decodes. Note that the default `--chunk` of 1200 B fails at ECC
+`m` and 472 px, so on a 40 mm cell the measured recommendation is lower.
 
 ## Development
 

@@ -11,7 +11,7 @@ import pytest
 
 from qrpack import cli
 
-SUBCOMMANDS = ("estimate", "pack", "restore")
+SUBCOMMANDS = ("estimate", "pack", "restore", "calibrate")
 
 
 def run(argv: list[str]) -> int:

@@ -1,4 +1,4 @@
-"""Command-line entry point: ``qrpack estimate | pack | restore``.
+"""Command-line entry point: ``qrpack estimate | pack | restore | calibrate``.
 
 Owned by @dreamboy17. Each module owner adds or wires their own subcommand;
 keep edits to your subcommand's ``_add_*`` function and its ``_cmd_*`` handler.
@@ -18,6 +18,7 @@ from pathlib import Path
 
 from . import __version__
 from .core import chunk, compress, decompress, pack_bytes, unpack_bytes, verify_digest
+from .calibrate import LADDER, PRINTED_PX, format_table, recommend, sweep
 from .scan import reassemble, scan_image
 from .sheet import make_sheet
 
@@ -108,6 +109,26 @@ def _cmd_restore(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_calibrate(args: argparse.Namespace) -> int:
+    try:
+        rows = sweep(
+            LADDER,
+            printed_px=args.printed_px,
+            blur=args.blur,
+            jpeg_quality=args.jpeg_quality,
+            ecc=args.ecc,
+        )
+    except (TypeError, ValueError) as exc:
+        return _fail("calibrate", str(exc))
+    print(format_table(rows))
+    best = recommend(rows)
+    if best is None:
+        return _fail("calibrate", "no payload size decoded; raise --printed-px or lower --blur")
+    print()
+    print(f"recommended --chunk : {best} B")
+    return 0
+
+
 def _add_chunk_option(p: argparse.ArgumentParser) -> None:
     p.add_argument(
         "--chunk",
@@ -169,6 +190,32 @@ def _add_restore(sub: argparse._SubParsersAction) -> None:
     p.set_defaults(func=_cmd_restore)
 
 
+def _add_calibrate(sub: argparse._SubParsersAction) -> None:
+    p = sub.add_parser(
+        "calibrate",
+        help="measure which chunk size survives print and photo, and recommend one",
+        description="Render a ladder of payload sizes at one printed size, degrade "
+        "them, and report which still decode.",
+    )
+    p.add_argument(
+        "--ecc", default="m", metavar="LEVEL",
+        help="error-correction level: l, m, q or h (default m)",
+    )
+    p.add_argument(
+        "--printed-px", type=int, default=PRINTED_PX, metavar="PX",
+        help=f"printed square size in pixels (default {PRINTED_PX}: 40 mm at 300 DPI)",
+    )
+    p.add_argument(
+        "--blur", type=int, default=0, metavar="RADIUS",
+        help="Gaussian blur radius in pixels to simulate a soft photo (default 0)",
+    )
+    p.add_argument(
+        "--jpeg-quality", type=int, default=100, metavar="Q",
+        help="JPEG quality 1-100 to simulate compression (default 100: none)",
+    )
+    p.set_defaults(func=_cmd_calibrate)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="qrpack",
@@ -179,6 +226,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_estimate(sub)
     _add_pack(sub)
     _add_restore(sub)
+    _add_calibrate(sub)
     return parser
 
 

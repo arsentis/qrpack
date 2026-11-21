@@ -177,3 +177,32 @@ def sweep(
             }
         )
     return rows
+
+
+def recommend(rows: list[dict]) -> int | None:
+    """Largest chunk size that survived, with every smaller size surviving too.
+
+    Stops at the first failure when walking up the ladder, so a lucky pass above
+    a failure is never recommended. Returns None when even the smallest failed.
+    """
+    best = None
+    for row in sorted(rows, key=lambda r: r["chunk_bytes"]):
+        if not row["survives"]:
+            break
+        best = row["chunk_bytes"]
+    return best
+
+
+def format_table(rows: list[dict]) -> str:
+    """The table `qrpack calibrate` prints, one line per payload size."""
+    lines = ["payload  ver  modules  px/module  decodes"]
+    for row in rows:
+        if not row["fits"]:
+            lines.append(f"{row['chunk_bytes']:>6} B  {'-':>3}  {'-':>7}  {'-':>9}  no fit")
+            continue
+        verdict = "PASS" if row["survives"] else "fail"
+        lines.append(
+            f"{row['chunk_bytes']:>6} B  v{row['version']:<2}  {row['modules']:>7}  "
+            f"{row['px_per_module']:>9.2f}  {verdict}"
+        )
+    return "\n".join(lines)

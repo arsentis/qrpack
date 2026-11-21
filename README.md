@@ -3,9 +3,19 @@
 Pack a folder into printable QR codes, print it, photograph it, get the folder
 back — verified byte for byte.
 
-> **Status: in development.** This README documents the goal. Measured results
-> are added as the features land; see `PLAN.md` for the schedule and
-> `CONTRIBUTING.md` before your first commit.
+> **Status: working end to end.** `estimate`, `pack` and `restore` are
+> implemented and a folder round-trips through a rendered sheet byte for byte
+> (see the transcripts below). `calibrate` is still in progress. 133 tests.
+> See `PLAN.md` for the schedule and `CONTRIBUTING.md` before your first commit.
+
+## Try it in thirty seconds
+
+```bash
+pip install -e ".[dev]"
+qrpack pack ./some-folder -o sheet.png --chunk 300
+qrpack restore sheet.png -o restored
+diff -r ./some-folder restored      # prints nothing
+```
 
 ## The problem
 

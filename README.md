@@ -1,5 +1,7 @@
 # qrpack
 
+[![CI](https://github.com/arsentis/qrpack/actions/workflows/ci.yml/badge.svg)](https://github.com/arsentis/qrpack/actions/workflows/ci.yml)
+
 Pack a folder into printable QR codes, print it, photograph it, get the folder
 back — verified byte for byte.
 

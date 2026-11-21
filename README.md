@@ -351,6 +351,7 @@ To verify that `qrpack` works beyond digital QR generation, we conducted a physi
 
 Size of the photo to be restored successfully: 340 KB
 Size of the sheet generated: 45 KB
+**Chunk size:** 1,200 bytes
 
 ### Findings
 
@@ -370,7 +371,7 @@ The results support the feasibility of using our printed QR codes as a backup me
 **Original file → QR sheet → Printed paper → Smartphone photograph → Restored file**
 
 The results support the feasibility of using printed QR codes as a backup medium for small digital artifacts.
-See the screensnots from the experiment in main/experiment1.png and main/experiment2.png and main/experiment3.png
+See the screensnots from the experiment in main/experiment1-work-environment.jpg, main/experiment2-photo-from-phone-camera.jpg, main/experiment3-encoded-message.jpg, and experiment4-original-txt-file.jpg
 
 Read `CONTRIBUTING.md` first. Work is tracked in `PLAN.md` and GitHub issues.
 

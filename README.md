@@ -92,7 +92,19 @@ The standard OpenCV `QRCodeDetector` was tested with QR codes generated using di
 
 These results show that decoding performance depends on the detector, image scale and QR code configuration.
 
-The experiments were performed using Python, Segno and OpenCV. See the measurement script in the project instructions for the complete reproduction procedure.
+The same codes were also tested with `QRCodeDetectorAruco`:
+
+| ECC | QR Version | Scale 4 | Scale 6 | Scale 8 |
+|---|---:|---|---|---|
+| L | 26 | PASS | PASS | PASS |
+| M | 30 | PASS | PASS | PASS |
+| Q | 37 | PASS | PASS | PASS |
+
+The experiments were performed using Python, Segno and OpenCV. To reproduce every number in this section, run:
+
+```bash
+python3 tests/measure_scan_decoders.py
+```
 
 ### Damaged sheet
 

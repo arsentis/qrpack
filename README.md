@@ -96,12 +96,95 @@ qrpack calibrate                 # measure this machine's real limit (planned)
 ```
 
 `--chunk BYTES` sets how many compressed bytes go into each code (default
-1,200). The command parses its arguments today; `estimate`, `pack` and
-`restore` are connected to the library during the sprint and, until then, exit
-with a non-zero status and a "not implemented yet" message, so a script can
-never mistake a stub for a backup that was written.
+1,200) and `--cols N` how many codes sit across a page (default 3). Exit
+status is `0` on success and non-zero on any failure, so a script can never
+mistake a failed run for a backup that was written.
 
-Exit status: `0` on success, non-zero on any failure.
+### Every transcript below is real
+
+They come from one run of `bash tests/capture_usage.sh` on a folder of three
+small files (Markdown, an SSH public key, 400 random bytes). Re-run that script
+after changing the CLI: if its output stops matching this section, this section
+is wrong.
+
+#### estimate — how much paper will this take?
+
+```
+$ qrpack estimate notes
+10240 B raw -> 692 B compressed -> 951 chars encoded -> 1 codes
+exit 0
+
+$ qrpack estimate notes --chunk 300
+10240 B raw -> 692 B compressed -> 1005 chars encoded -> 3 codes
+exit 0
+```
+
+Two things visible here that are easy to get wrong. The 10,240 B is the *tar*,
+not the files: a tar pads every entry to a 512-byte record, which is why three
+small files become ten kilobytes and why compressing before chunking is not an
+optimisation but the thing that makes the idea work at all. And the encoded
+length grows from 951 to 1,005 characters when the chunk size shrinks, because
+each code carries its own `QRPK1|digest|i/n|` header — more codes means more
+headers.
+
+#### pack — folder to printable sheet
+
+```
+$ qrpack pack notes -o sheet.png --chunk 300
+3 codes on 1 page(s) -> sheet.png
+exit 0
+
+$ ls
+  notes
+  sheet.png
+```
+
+#### restore — sheet back to folder
+
+```
+$ qrpack restore sheet.png -o restored
+restored 3 file(s) -> restored
+exit 0
+
+$ diff -r notes restored
+  (no output: the restored files are byte identical)
+```
+
+That silent `diff` is the entire project in one line: the bytes that came off
+the image are the bytes that went onto it.
+
+#### Failures are loud
+
+```
+$ qrpack pack does-not-exist -o x.png
+qrpack pack: does-not-exist does not exist
+exit 1
+
+$ qrpack restore blank.png -o out2
+qrpack restore: no qrpack codes found in the image(s)
+exit 1
+```
+
+A backup tool that exits `0` without writing anything is worse than one that
+crashes, so every failure path returns non-zero with a message naming the cause
+instead of a traceback.
+
+#### Environment these were captured on
+
+```
+$ python3 -m qrpack.cli --version
+qrpack 0.0.1
+
+$ python -m pytest -q
+125 passed in 3.81s
+```
+
+#### calibrate
+
+Not yet implemented, so there is no transcript to paste. It is tracked in
+issues #41, #42 and #43; the planned output is a payload-size ladder with a
+pixels-per-module column and one recommended `--chunk` value. The measurements
+it will automate are in Measured Findings above.
 
 ## Development
 

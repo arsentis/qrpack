@@ -151,7 +151,8 @@ characters: a header plus a 1,200-byte base64 chunk) in a 40 mm cell at 300 DPI
 | h | 40 | 185 | 2.55 |
 
 `h` recovers the most damage but needs 1.48x the modules of `l`, which drops it
-below the roughly 3 px/module region where decoders start failing.
+to 2.55 px/module. In the sweep below, a code at 3.01 px/module already failed
+on this machine, so `h` is not usable at this printed size.
 
 The table follows from the QR specification as implemented by Segno, so it is
 the same on any machine; what depends on the printer and camera is where

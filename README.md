@@ -92,6 +92,36 @@ These results show that decoding performance depends on the detector, image scal
 
 The experiments were performed using Python, Segno and OpenCV. See the measurement script in the project instructions for the complete reproduction procedure.
 
+### Damaged sheet
+
+One QR code on a five-part sheet was painted black before scanning, the way a
+stain or a folded corner would destroy one code on a printed sheet.
+
+Reproduce:
+
+```bash
+python tests/measure_damaged_sheet.py
+```
+
+Measured output:
+
+```
+parts rendered    : 5
+part blacked out  : 3
+parts decoded     : [1, 2, 4, 5]
+reassemble        : missing=[3] blob_empty=True digest=f7dbe72bcc439d2d
+cli restore       : rc=1 | qrpack restore: missing parts [3]; rescan them and pass every sheet
+files written     : 0
+with intact copy  : rc=0 bytes_identical=True
+```
+
+The scan recovered four of the five codes. `reassemble` named part 3 and
+returned an empty blob, so the restore exited non-zero and wrote no files —
+it did not hand back a corrupt backup. Adding one intact copy of the same
+sheet supplied the missing part and the original file came back byte for byte.
+`tests/test_damaged_sheet.py` also covers the first and last parts and a code
+on a later page of a multi-page sheet.
+
 ## Command line
 
 Installing the package (see Development below) puts a `qrpack` command on your

@@ -153,6 +153,37 @@ P = 'QRPK1|0123456789abcdef|1/9|' + 'QRPKdata' * 150; \
 [print(r['ecc'], r['version'], r['modules'], round(r['px_per_module'], 2)) for r in ecc_cost(P)]"
 ```
 
+### Where Decoding Fails
+
+Each code is rendered with `render_codes`, resized to one fixed square of
+`472` px (a 40 mm cell at 300 DPI), optionally blurred, and decoded with
+OpenCV's `QRCodeDetector`. Every code gets the same printed size, because on
+paper every cell occupies the same square: a denser symbol gets fewer pixels per
+module. Scaling each code by the same fraction instead would make big codes look
+better than they are.
+
+Measured with `qrpack.calibrate.sweep` at ECC `m`:
+
+| Chunk (B) | Payload (chars) | Version | Modules | px/module | Clean | Blur 2 |
+|---:|---:|---:|---:|---:|---|---|
+| 100 | 163 | 9 | 61 | 7.74 | pass | pass |
+| 300 | 427 | 16 | 89 | 5.30 | pass | FAIL |
+| 600 | 827 | 23 | 117 | 4.03 | pass | FAIL |
+| 900 | 1227 | 29 | 141 | 3.35 | pass | FAIL |
+| 1200 | 1627 | 33 | 157 | 3.01 | FAIL | FAIL |
+| 1500 | 2027 | 38 | 177 | 2.67 | FAIL | FAIL |
+
+Without blur, chunk sizes 100, 300, 600, 900 survived and 1200, 1500 failed.
+
+The pass/fail edge comes from the decoder, not only from px/module, so these rows
+are measurements on this machine and not a rule.
+
+Reproduce:
+
+```bash
+python -c "from qrpack.calibrate import sweep; [print(r) for r in sweep()]"
+```
+
 ## Command line
 
 Installing the package (see Development below) puts a `qrpack` command on your

@@ -122,6 +122,35 @@ sheet supplied the missing part and the original file came back byte for byte.
 `tests/test_damaged_sheet.py` also covers the first and last parts and a code
 on a later page of a multi-page sheet.
 
+### ECC Cost in Printed Pixels
+
+Raising the error-correction level needs more modules, so each module gets
+smaller in the same printed square. For one realistic payload (`1227`
+characters: a header plus a 1,200-byte base64 chunk) in a 40 mm cell at 300 DPI
+(`472` px), computed by `qrpack.calibrate.ecc_cost`:
+
+| ECC | Version | Modules | px/module |
+|---|---|---|---|
+| l | 25 | 125 | 3.78 |
+| m | 29 | 141 | 3.35 |
+| q | 34 | 161 | 2.93 |
+| h | 40 | 185 | 2.55 |
+
+`h` recovers the most damage but needs 1.48x the modules of `l`, which drops it
+below the roughly 3 px/module region where decoders start failing.
+
+The table follows from the QR specification as implemented by Segno, so it is
+the same on any machine; what depends on the printer and camera is where
+decoding actually fails, which is measured separately.
+
+Reproduce:
+
+```bash
+python -c "from qrpack.calibrate import ecc_cost; \
+P = 'QRPK1|0123456789abcdef|1/9|' + 'QRPKdata' * 150; \
+[print(r['ecc'], r['version'], r['modules'], round(r['px_per_module'], 2)) for r in ecc_cost(P)]"
+```
+
 ## Command line
 
 Installing the package (see Development below) puts a `qrpack` command on your

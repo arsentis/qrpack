@@ -7,7 +7,7 @@ Modules land during the sprint (see PLAN.md):
     calibrate.py  measuring the real limit of a scanner
 """
 
-__version__ = "0.0.1"
+__version__ = "0.1.0"
 
 from .core import (
     DigestMismatchError,

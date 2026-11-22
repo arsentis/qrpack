@@ -8,7 +8,7 @@ back — verified byte for byte.
 > **Status: working end to end.** `estimate`, `pack` and `restore` are
 > implemented and a folder round-trips through a rendered sheet byte for byte
 > (see the transcripts below). `calibrate` is still in progress. 133 tests.
-> See `PLAN.md` for the schedule and `CONTRIBUTING.md` before your first commit.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) to get started.
 
 ## Try it in thirty seconds
 
@@ -371,9 +371,16 @@ The results support the feasibility of using our printed QR codes as a backup me
 **Original file → QR sheet → Printed paper → Smartphone photograph → Restored file**
 
 The results support the feasibility of using printed QR codes as a backup medium for small digital artifacts.
-See the screensnots from the experiment in main/experiment1-work-environment.jpg, main/experiment2-photo-from-phone-camera.jpg, main/experiment3-encoded-message.jpg, and experiment4-original-txt-file.jpg
+Photographs from the run are in [`docs/images/`](docs/images):
 
-Read `CONTRIBUTING.md` first. Work is tracked in `PLAN.md` and GitHub issues.
+| Image | Shows |
+|---|---|
+| [`original-file.jpg`](docs/images/original-file.jpg) | the source text file before packing |
+| [`printed-sheet.jpg`](docs/images/printed-sheet.jpg) | the generated QR sheet, printed |
+| [`print-setup.jpg`](docs/images/print-setup.jpg) | the printer and working setup |
+| [`phone-capture.jpg`](docs/images/phone-capture.jpg) | capturing the printed sheet with a phone |
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Licence
 

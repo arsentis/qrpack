@@ -13,6 +13,7 @@ build/
 
 # qrpack outputs — never commit generated sheets or renders
 brag-output/
+brag-output-*/
 *.png
 *.jpg
 *.pdf
